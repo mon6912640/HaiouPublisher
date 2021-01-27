@@ -1,16 +1,21 @@
 import subprocess
 import time
 from functools import partial
+from pprint import pprint
+import struct
 
+import requests
 from pywebio import start_server
 from pywebio.output import *
-from pywebio.session import hold, set_env
+from pywebio.session import hold, set_env, run_js
 
 
 def log(content, scope=None):
-    scope = 'content'
-    # put_scrollable(put_markdown(content, scope=scope))
-    put_markdown(content, scope=scope)
+    # scope = 'content'
+    # put_markdown(content, scope=scope)
+    msg_box.append(put_markdown(content))
+    run_js(
+        '$("#pywebio-scope-content>div").animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
 
 
 def print_now():
@@ -33,33 +38,55 @@ def run_cmd(cmd, err_str):
 
 
 def build(btn_val):
-    scope = 'content'
-    put_markdown(print_now(), scope=scope)
-    put_markdown(">>开始编译...请耐心等待...", scope=scope)
+    log(print_now())
+    log(">>开始编译...请耐心等待...")
     run_cmd('egret clean I:/newQz/client/yxqz -sourcemap', '编译错误')
 
 
 def update(btn_val):
-    scope = 'content'
-    # scroll_to(scope, position=Position.BOTTOM)
-    put_markdown(print_now(), scope=scope)
-    put_markdown(">>开始更新...请耐心等待...", scope=scope)
+    log(print_now())
+    log(">>开始更新...请耐心等待...")
     run_cmd('svn up I:/newQz/client/yxqz', '更新错误')
 
 
+def test(btn_val):
+    url = 'http://192.168.61.142:8080/ProtocolNewQZ/'
+    response = requests.get(url + '/protocol.do?method=proExtExport')
+    # 返回二进制流
+    pprint(response.content)
+    by = response.content
+    cmd_len = 0
+    info = ''
+    len = struct.unpack('!h', by)
+    log(str(len))
+
+    # s1 = '你好啊\'我\''
+    # s1 = s1.replace('\'', '\"')
+    # log(s1)
+    # o1 = {'key1': 1, 'key2': 2, 'key3': 3}
+    # for key in o1:
+    #     print(key, o1[key])
+    pass
+
+
 async def main():
+    global msg_box
+
     set_env(title="前端版本服工具")
 
     put_table([
         ['新枪战', ''],
         ['更新资源和代码', put_buttons(['更新'], onclick=partial(update))],
+        ['导出协议', put_buttons(['协议'], onclick=partial(test))],
         ['编译代码', put_buttons(['编译'], onclick=partial(build))],
         ['打包配置', put_buttons(['打包'], onclick=...)],
         [put_link('版本服地址（新枪战）', url='http://192.168.61.64:5555/index.html', new_window=True), '']
     ])
 
     put_markdown('## 日志信息')
+    msg_box = output()
     with use_scope('content'):
+        style(put_scrollable(msg_box, max_height=400), 'height:400px')
         pass
 
     # 这句是保持网页连接状态，否则按钮点击的回调不能正常显示
