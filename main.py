@@ -1,20 +1,26 @@
 import subprocess
 import time
 from functools import partial
-from pprint import pprint
-import struct
 
 import requests
 from pywebio import start_server
 from pywebio.output import *
 from pywebio.session import hold, set_env, run_js
 
+import bytes_util
+from bytes_util import *
+from haiou_protocol import VoProtocol
+from pathlib import Path
+
+root = 'I:/newQz/client/yxqz/'
+url = 'http://192.168.61.142:8080/ProtocolNewQZ/'
+
 
 def log(content, scope=None):
-    # msg_box.append(put_markdown(content))
-    # run_js(
-    #     '$("#pywebio-scope-content>div").animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
-    pprint(content)
+    msg_box.append(put_markdown(content))
+    run_js(
+        '$("#pywebio-scope-content>div").stop().animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
+    # pprint(content)
 
 
 def print_now():
@@ -39,82 +45,60 @@ def run_cmd(cmd, err_str):
 def build(btn_val):
     log(print_now())
     log(">>开始编译...请耐心等待...")
-    run_cmd('egret clean I:/newQz/client/yxqz -sourcemap', '编译错误')
+    run_cmd('egret clean {0} -sourcemap'.format(root), '编译错误')
 
 
 def update(btn_val):
     log(print_now())
     log(">>开始更新...请耐心等待...")
-    run_cmd('svn up I:/newQz/client/yxqz', '更新错误')
+    run_cmd('svn up {0}'.format(root), '更新错误')
 
 
 def test(btn_val):
-    url = 'http://192.168.61.142:8080/ProtocolNewQZ/'
+    log(print_now())
+    log(">>导出协议...请耐心等待...")
     response = requests.get(url + '/protocol.do?method=proExtExport')
     # 返回二进制流
-    # pprint(response.content)
     by = response.content
-    log('二进制长度=' + str(len(by)))
-    cmd_len = 0
+    # log('二进制长度=' + str(len(by)))
+    proto_count = 0
     info = ''
-    offset = 0
-    count = struct.unpack_from('>h', by, offset)[0]
-    offset += 2
+    br = BytesReader(by)
+    count = br.read_short()
+    bin_by = bytes()
     for i in range(count):
-        sys_id = struct.unpack_from('>h', by, offset)[0]
-        offset += 2
-        log(str(sys_id))
+        info += '\n'
+        vo = VoProtocol()
+        vo.sys_id = br.read_short()
+        vo.sys_name = br.read_utf()
+        vo.cmd = br.read_short()
+        vo.type = br.read_byte()
+        vo.title = br.read_utf()
+        vo.des = br.read_utf()
+        vo.read_types = br.read_utf()
+        vo.fields = br.read_utf()
+        vo.class_name = br.read_utf()
 
-        utfl = struct.unpack_from('>H', by, offset)[0]
-        tby = by[offset + 2:offset + 2 + utfl]
-        sys_name = tby.decode('utf-8', errors='ignore')
-        offset += 2 + utfl
-        log(sys_name)
+        if vo.type == 1:  # 过滤前端发到后端的
+            continue
 
-        t = struct.unpack_from('>hb', by, offset)
-        log('协议号：' + str(t[0]))
-        log('协议类型：' + str(t[1]))
-        offset += 2 + 1
+        proto_count += 1
 
-        utfl = struct.unpack_from('>H', by, offset)[0]
-        tby = by[offset + 2:offset + 2 + utfl]
-        title = tby.decode('utf-8', errors='ignore')
-        offset += 2 + utfl
-        log(title)
+        info += vo.create_interface()
+        bin_by += bytes_util.write_int(vo.cmd)
+        bin_by += bytes_util.write_utf(vo.get_fields())
+        bin_by += bytes_util.write_utf(vo.get_protocol_variable())
 
-        utfl = struct.unpack_from('>H', by, offset)[0]
-        tby = by[offset + 2:offset + 2 + utfl]
-        desc = tby.decode('utf-8', errors='ignore')
-        offset += 2 + utfl
-        log(desc)
+    bin_by = bytes_util.write_int(proto_count) + bin_by
+    bin_path = Path(root, 'resource/config/clientProtocol.bin')
+    with bin_path.open('wb') as fs:
+        fs.write(bin_by)
 
-        utfl = struct.unpack_from('>H', by, offset)[0]
-        tby = by[offset + 2:offset + 2 + utfl]
-        read_types = tby.decode('utf-8', errors='ignore')
-        offset += 2 + utfl
-        log(read_types)
+    code_path = Path(root, 'src/protocol/IProtocol0.ts')
+    with code_path.open('wt', encoding='utf-8') as fs:
+        fs.write(info)
 
-        utfl = struct.unpack_from('>H', by, offset)[0]
-        tby = by[offset + 2:offset + 2 + utfl]
-        fields = tby.decode('utf-8', errors='ignore')
-        offset += 2 + utfl
-        log(fields)
-
-        utfl = struct.unpack_from('>H', by, offset)[0]
-        tby = by[offset + 2:offset + 2 + utfl]
-        fields = tby.decode('utf-8', errors='ignore')
-        offset += 2 + utfl
-        log(fields)
-        # break
-
-    log(str(count))
-
-    # s1 = '你好啊\'我\''
-    # s1 = s1.replace('\'', '\"')
-    # log(s1)
-    # o1 = {'key1': 1, 'key2': 2, 'key3': 3}
-    # for key in o1:
-    #     print(key, o1[key])
+    log('>>...协议生成完毕')
     pass
 
 

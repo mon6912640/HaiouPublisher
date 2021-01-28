@@ -25,38 +25,54 @@ class VoProtocol:
         info = ''
         info += self.make_descript(self.title + '  ' + self.des)
         info += 'interface ICMD' + str(self.cmd) + ' {\n'
-        if self.des != '':
+        if self.fields:
             self.fields = self.fields.replace('\'', '\"')
-        cmd_desc = json.loads(self.fields)
-        cmd_desc = cmd_desc.fields
-        for key in cmd_desc:
-            item = cmd_desc[key]
-            ftype = item.fieldType
-            if ftype == 'I' or ftype == 'L' or ftype == 'B' or ftype == 'S':
-                info += self.get_nbsp(1) + self.make_descript(item.noteName) + self.get_nbsp(
-                    1) + item.fieldName + ':number;\n'
-            elif ftype == 'U':
-                info += self.get_nbsp(1) + self.make_descript(item.noteName) + self.get_nbsp(
-                    1) + item.fieldName + ':string;\n'
-            else:  # 数组格式不做映射
-                info += self.get_nbsp(1) + self.make_descript(item.noteName) + self.get_nbsp(
-                    1) + item.fieldName + ':any[];\n'
+            try:
+                cmd_desc = json.loads(self.fields)
+            except:
+                print('error')
+                print(self.cmd)
+                print('<' + self.fields + '>')
+            else:
+                if cmd_desc is not None and 'fields' in cmd_desc:
+                    obj = cmd_desc['fields']
+                    for item in obj:
+                        field_type = item['fieldType']
+                        note_name = item['noteName']
+                        field_name = item['fieldName']
+                        if field_type == 'I' or field_type == 'L' or field_type == 'B' or field_type == 'S':
+                            info += self.get_nbsp(1) + self.make_descript(note_name) + self.get_nbsp(
+                                1) + field_name + ':number;\n'
+                        elif field_type == 'U':
+                            info += self.get_nbsp(1) + self.make_descript(note_name) + self.get_nbsp(
+                                1) + field_name + ':string;\n'
+                        else:  # 数组格式不做映射
+                            info += self.get_nbsp(1) + self.make_descript(note_name) + self.get_nbsp(
+                                1) + field_name + ':any[];\n'
+                    pass
+                else:
+                    print('fuck')
+                    print(self.fields)
         info += '}\n'
         return info
 
     def get_fields(self):
         """
-        返回  [U-I-[U]]格式
+        I-B-I-I-I-I-[L-U-I-I-I-I-B-L-I]-[I]
+        转换成
+        ["I","B","I","I","I","I",["L","U","I","I","I","I","B","L","I"],["I"]]
         :return:
         """
         ret = ''
         need_flag = False
         if self.read_types != '':
             k = 0
-            arr = self.read_types.split('')
+            arr = list(self.read_types)
+            # print(arr)
             for i in range(len(arr)):
                 next_str = None
-                if arr[i + 1]:
+                # print(i)
+                if (i + 1) < len(arr):
                     next_str = arr[i + 1]
                 if arr[i] == '-':
                     continue
@@ -73,6 +89,8 @@ class VoProtocol:
                         need_flag = True
                 k += 1
         ret = '[' + ret + ']'
+        # print(self.read_types)
+        # print(ret)
         return ret
 
     def get_protocol_variable(self):
@@ -81,16 +99,15 @@ class VoProtocol:
         :return:
         """
         ret = ''
-        if self.des != '':
+        if self.fields != '':
             self.fields = self.fields.replace('\'', '\"')
             cmd_desc = json.loads(self.fields)
-            cmd_desc = cmd_desc.fields
+            cmd_desc = cmd_desc['fields']
             k = 0
-            for key in cmd_desc:
-                item = cmd_desc[key]
+            for item in cmd_desc:
                 if k != 0:
                     ret += ','
-                ret += '\"' + item.fieldName + '\"'
+                ret += '\"' + item['fieldName'] + '\"'
                 k += 1
         return '[' + ret + ']'
 
