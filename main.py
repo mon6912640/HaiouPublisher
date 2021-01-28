@@ -11,11 +11,10 @@ from pywebio.session import hold, set_env, run_js
 
 
 def log(content, scope=None):
-    # scope = 'content'
-    # put_markdown(content, scope=scope)
-    msg_box.append(put_markdown(content))
-    run_js(
-        '$("#pywebio-scope-content>div").animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
+    # msg_box.append(put_markdown(content))
+    # run_js(
+    #     '$("#pywebio-scope-content>div").animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
+    pprint(content)
 
 
 def print_now():
@@ -53,12 +52,62 @@ def test(btn_val):
     url = 'http://192.168.61.142:8080/ProtocolNewQZ/'
     response = requests.get(url + '/protocol.do?method=proExtExport')
     # 返回二进制流
-    pprint(response.content)
+    # pprint(response.content)
     by = response.content
+    log('二进制长度=' + str(len(by)))
     cmd_len = 0
     info = ''
-    len = struct.unpack('!h', by)
-    log(str(len))
+    offset = 0
+    count = struct.unpack_from('>h', by, offset)[0]
+    offset += 2
+    for i in range(count):
+        sys_id = struct.unpack_from('>h', by, offset)[0]
+        offset += 2
+        log(str(sys_id))
+
+        utfl = struct.unpack_from('>H', by, offset)[0]
+        tby = by[offset + 2:offset + 2 + utfl]
+        sys_name = tby.decode('utf-8', errors='ignore')
+        offset += 2 + utfl
+        log(sys_name)
+
+        t = struct.unpack_from('>hb', by, offset)
+        log('协议号：' + str(t[0]))
+        log('协议类型：' + str(t[1]))
+        offset += 2 + 1
+
+        utfl = struct.unpack_from('>H', by, offset)[0]
+        tby = by[offset + 2:offset + 2 + utfl]
+        title = tby.decode('utf-8', errors='ignore')
+        offset += 2 + utfl
+        log(title)
+
+        utfl = struct.unpack_from('>H', by, offset)[0]
+        tby = by[offset + 2:offset + 2 + utfl]
+        desc = tby.decode('utf-8', errors='ignore')
+        offset += 2 + utfl
+        log(desc)
+
+        utfl = struct.unpack_from('>H', by, offset)[0]
+        tby = by[offset + 2:offset + 2 + utfl]
+        read_types = tby.decode('utf-8', errors='ignore')
+        offset += 2 + utfl
+        log(read_types)
+
+        utfl = struct.unpack_from('>H', by, offset)[0]
+        tby = by[offset + 2:offset + 2 + utfl]
+        fields = tby.decode('utf-8', errors='ignore')
+        offset += 2 + utfl
+        log(fields)
+
+        utfl = struct.unpack_from('>H', by, offset)[0]
+        tby = by[offset + 2:offset + 2 + utfl]
+        fields = tby.decode('utf-8', errors='ignore')
+        offset += 2 + utfl
+        log(fields)
+        # break
+
+    log(str(count))
 
     # s1 = '你好啊\'我\''
     # s1 = s1.replace('\'', '\"')
