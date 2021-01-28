@@ -168,3 +168,8 @@ def write_utf(val: str):
     sby = val.encode()
     count = len(sby)
     return struct.pack('{0}H{1}s'.format(get_endian_str(), count), count, sby)
+
+
+def write_utfbytes(val: str):
+    sby = val.encode()
+    return struct.pack('{0}s'.format(get_endian_str()), sby)
