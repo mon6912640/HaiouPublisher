@@ -1,11 +1,13 @@
+import json
+import locale
 import subprocess
 import time
 from functools import partial
-import xlrd
+from pathlib import Path
 from typing import List
-import json
 
 import requests
+import xlrd
 from pywebio import start_server
 from pywebio.output import *
 from pywebio.session import hold, set_env, run_js
@@ -13,7 +15,6 @@ from pywebio.session import hold, set_env, run_js
 import bytes_util
 from bytes_util import *
 from haiou_protocol import VoProtocol
-from pathlib import Path
 
 root_work = 'I:/newQz/client/yxqz/'
 url_proto = 'http://192.168.61.142:8080/ProtocolNewQZ/'
@@ -36,18 +37,38 @@ def print_now():
 
 
 def run_cmd(cmd, err_str):
+    """
+    运行外部命令行
+    :param cmd:
+    :param err_str:错误提示
+    :return:返回非零则执行错误
+    """
     try:
         out_bytes = subprocess.check_output(cmd, shell=True,
                                             stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         out_bytes = e.output
         code = e.returncode
-        out_text = out_bytes.decode('utf-8')
-        log('>>`{0}`'.format(err_str))
-        log('>><font color="#ff0000">{0}</font>'.format(out_text))
+        try:
+            # svn命令，含有中文路径的话，不能使用utf-8解码
+            out_text = out_bytes.decode('utf-8')
+        except:
+            out_encoding = locale.getdefaultlocale()[1]
+            out_text = out_bytes.decode(out_encoding)
+        finally:
+            log('>>`{0}`'.format(err_str))
+            log('>><font color="#ff0000">{0}</font>'.format(out_text))
+        return 1
     else:
-        out_text = out_bytes.decode('utf-8')
-        log('>>{0}'.format(out_text))
+        try:
+            # svn命令，含有中文路径的话，不能使用utf-8解码
+            out_text = out_bytes.decode('utf-8')
+        except:
+            out_encoding = locale.getdefaultlocale()[1]
+            out_text = out_bytes.decode(out_encoding)
+        finally:
+            log('>>{0}'.format(out_text))
+        return 0
 
 
 def build(btn_val):
@@ -148,6 +169,11 @@ class VoCfg:
 
 def pack_cfg(btn_val):
     log(print_now())
+    if btn_val:
+        log(">>更新配置...请耐心等待...")
+        runcode = run_cmd('svn up {0}'.format(cfg_source), '更新错误')
+        if runcode != 0:
+            return
     log(">>开始打包配置...请耐心等待...")
     source_path = Path(cfg_source)
     list_file = sorted(source_path.rglob('*.xlsx'))
@@ -262,6 +288,32 @@ def pack_cfg(btn_val):
     log('>>...配置打包完毕')
 
 
+def pack_ani(btn_val):
+    log(print_now())
+    log(">>开始打包动画配置...请耐心等待...")
+    model_path = Path(root_work, 'resource/model/')
+    list_file = sorted(model_path.rglob('*.json'))
+    ani_obj = {}
+    for v in list_file:
+        json_str = v.read_text()
+        url = str(v.absolute())
+        if 'hurt' in url or 'ice' in url or 'fire' in url or 'poison' in url or 'thunder' in url:
+            ii = 0
+            res_obj = json.loads(json_str)
+            if 'res' in res_obj:
+                for key in res_obj['res']:
+                    ii += 1
+                    if ii > 4:
+                        error('发现异常动画文件，联系水爷：[{0}]'.format(url))
+                        return
+        key_name = v.name.split('.')[0]
+        ani_obj[key_name] = json.loads(json_str)
+    ani_json = json.dumps(ani_obj, ensure_ascii=False, separators=(',', ':'))
+    ani_path = Path(root_work, 'resource/ani.json')
+    ani_path.write_text(ani_json)
+    log('>>...动画配置打包完毕')
+
+
 async def main():
     global msg_box
 
@@ -272,7 +324,8 @@ async def main():
         ['更新资源和代码', put_buttons(['更新'], onclick=partial(update))],
         ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
         ['编译代码', put_buttons(['编译'], onclick=partial(build))],
-        ['打包配置', put_buttons(['打包'], onclick=partial(pack_cfg))],
+        ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
+        ['打包动画', put_buttons(['打包动画'], onclick=partial(pack_ani))],
         [put_link('版本服地址（新枪战）', url='http://192.168.61.64:5555/index.html', new_window=True), '']
     ])
 
