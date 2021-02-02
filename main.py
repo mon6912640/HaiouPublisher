@@ -229,7 +229,6 @@ def pack_cfg(btn_val):
             continue
         ts1_str += '\ninterface I' + cfg_name + ' {' + temp_ts1_str + '\n}'
 
-        v.name.split('.')[0]
         temp_ts2_str1 += '\t/**{0} */private static _{1}: Record<string, I{2}>;\n'.format(v.name.split('.')[0],
                                                                                           cfg_name, cfg_name)
         temp_ts2_str2 += '\tstatic get ' + cfg_name + '(){\n' \
@@ -339,8 +338,8 @@ async def main():
     await hold()
 
 
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     start_server(main, debug=True, port=5000)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+# pywebio github at https://github.com/wang0618/PyWebIO
+# pywebio docs at https://pywebio.readthedocs.io/zh_CN/latest/index.html
