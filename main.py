@@ -153,6 +153,10 @@ def pack_cfg(btn_val):
     list_file = sorted(source_path.rglob('*.xlsx'))
     vo_cfg_map = {}
     obj_map = {}
+    ts1_str = ''
+    ts2_str = ''
+    temp_ts2_str1 = ''
+    temp_ts2_str2 = ''
     for v in list_file:
         file_url = v.absolute()
         if v.name.find('~$') > -1:  # 跳过临时打开的xlsx文件
@@ -176,6 +180,7 @@ def pack_cfg(btn_val):
         vo.cfg_name = cfg_name
         vo.fname = v.name
         # count = 0
+        temp_ts1_str = ''
         for i in range(1, len(row_client)):
             if row_client[i].ctype != 1:
                 continue
@@ -189,7 +194,25 @@ def pack_cfg(btn_val):
             key_vo.des = row_key_des[i].value
             vo.key_list.append(key_vo)
             obj['key'].append(key_vo.name)
+            # ts文件1
+            temp_ts1_str += '\n/**' + key_vo.des + '*/' + key_vo.name + ';'
             # count += 1
+        if len(vo.key_list) < 1:
+            # 不导出没有键的表
+            del obj_map[cfg_name]
+            continue
+        ts1_str += '\ninterface I' + cfg_name + ' {' + temp_ts1_str + '\n}'
+
+        v.name.split('.')[0]
+        temp_ts2_str1 += '\t/**{0} */private static _{1}: Record<string, I{2}>;\n'.format(v.name.split('.')[0],
+                                                                                          cfg_name, cfg_name)
+        temp_ts2_str2 += '\tstatic get ' + cfg_name + '(){\n' \
+                         + '\t\tvar self = this;\n' \
+                         + '\t\tif(!self._' + cfg_name + '){\n' \
+                         + '\t\t\tself._' + cfg_name + ' = self.t(\'' + cfg_name + '\') as Record<string, I' + cfg_name + '>;\n' \
+                         + '\t\t}\n' \
+                         + '\t\treturn self._' + cfg_name + ';\n' \
+                         + '\t}\n\n'
 
         for i in range(4, sheet.nrows):
             # 首列为0的行不导出
@@ -218,8 +241,24 @@ def pack_cfg(btn_val):
     # print(obj_map)
     json_str = json.dumps(obj_map, ensure_ascii=False, separators=(',', ':'))
     json_path = Path(root_work, 'resource/config/config1.json')
-    with json_path.open('w', encoding='utf-8') as fs:
-        fs.write(json_str)
+    json_path.write_text(json_str, encoding='utf-8')
+
+    ts1_path = Path(root_work, 'src/config/IConfig.ts')
+    ts1_path.write_text(ts1_str, encoding='utf-8')
+
+    temp_ts2_str3 = '\tstatic dataLib;\n' \
+                    + '\tstatic t = ConfigHelp.decodeConfig;\n' \
+                    + '\tstatic init(lib) {\n' \
+                    + '\t\tthis.dataLib = lib;\n' \
+                    + '\t}\n\n'
+    ts2_str = 'class Config {\n' \
+              + temp_ts2_str1 \
+              + temp_ts2_str3 \
+              + temp_ts2_str2 \
+              + '}'
+    ts2_path = Path(root_work, 'src/config/Config.ts')
+    ts2_path.write_text(ts2_str, encoding='utf-8')
+
     log('>>...配置打包完毕')
 
 
