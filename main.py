@@ -1,6 +1,7 @@
 import argparse
 import json
 import locale
+import socket
 import subprocess
 import time
 from functools import partial
@@ -21,6 +22,21 @@ project_name = '枪战2'
 root_work = 'I:/newQz/client/yxqz/'
 url_proto = 'http://192.168.61.142:8080/ProtocolNewQZ/'
 cfg_source = 'I:/newQz/策划/配置表/'
+port = 5000
+
+
+def get_host_ip():
+    """
+    查询本机ip地址
+    :return: ip
+    """
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip
 
 
 def log(content, scope=None):
@@ -89,7 +105,7 @@ def protocol(btn_val=None):
     log(print_now())
     log(">>导出协议...请耐心等待...")
     try:
-        response = requests.get(url_proto + '/protocol1.do?method=proExtExport', timeout=2)
+        response = requests.get(url_proto + '/protocol.do?method=proExtExport', timeout=2)
     except:
         error('请求超时，请检查协议地址是否正确')
         return
@@ -369,6 +385,7 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=int, default=None, help='项目根目录')
     parser.add_argument('--proto', type=int, default=None, help='协议url地址')
     parser.add_argument('--cfg', type=int, default=None, help='策划配置表目录')
+    parser.add_argument('--port', type=int, default=5000, help='访问端口')
 
     args = parser.parse_args()
 
@@ -382,6 +399,8 @@ if __name__ == '__main__':
         url_proto = args.proto
     if args.cfg is not None:
         cfg_source = args.cfg
+    if args.port is not None:
+        port = args.port
 
     while True:
         root_path = Path(root_work)
@@ -391,7 +410,13 @@ if __name__ == '__main__':
             break
         break
 
-    start_server(main, debug=True, port=5000)
+    if ok_flag:
+        my_ip = get_host_ip()
+        print('服务器启动成功...')
+        print('访问地址：http://{0}:{1}'.format(my_ip, port))
+        start_server(main, debug=True, port=port)
+    else:
+        print('脚本参数有误，服务器启动失败')
 
 # pywebio github at https://github.com/wang0618/PyWebIO
 # pywebio docs at https://pywebio.readthedocs.io/zh_CN/latest/index.html
