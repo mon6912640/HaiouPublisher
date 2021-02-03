@@ -73,22 +73,32 @@ def run_cmd(cmd, err_str):
         return 0
 
 
-def build(btn_val):
+def build(btn_val=None):
     log(print_now())
     log(">>开始编译...请耐心等待...")
     run_cmd('egret clean {0} -sourcemap'.format(root_work), '编译错误')
 
 
-def update(btn_val):
+def update(btn_val=None):
     log(print_now())
     log(">>开始更新...请耐心等待...")
     run_cmd('svn up {0}'.format(root_work), '更新错误')
 
 
-def protocol(btn_val):
+def protocol(btn_val=None):
     log(print_now())
     log(">>导出协议...请耐心等待...")
-    response = requests.get(url_proto + '/protocol.do?method=proExtExport')
+    try:
+        response = requests.get(url_proto + '/protocol1.do?method=proExtExport', timeout=2)
+    except:
+        error('请求超时，请检查协议地址是否正确')
+        return
+    try:
+        response.raise_for_status()
+    except:
+        error('请求错误，请检查协议地址是否正确')
+        return
+    # print(response)
     # 返回二进制流
     by = response.content
     # log('二进制长度=' + str(len(by)))
@@ -171,7 +181,7 @@ class VoCfg:
         self.key_list = []
 
 
-def pack_cfg(btn_val):
+def pack_cfg(btn_val=None):
     log(print_now())
     if btn_val:
         log(">>更新配置...请耐心等待...")
@@ -290,7 +300,7 @@ def pack_cfg(btn_val):
     log('>>...配置打包完毕')
 
 
-def pack_ani(btn_val):
+def pack_ani(btn_val=None):
     log(print_now())
     log(">>开始打包动画配置...请耐心等待...")
     model_path = Path(root_work, 'resource/model/')
@@ -316,6 +326,16 @@ def pack_ani(btn_val):
     log('>>...动画配置打包完毕')
 
 
+def one_key(btn_val=None):
+    update()
+    pack_ani()
+    protocol()
+    pack_cfg(True)
+    build()
+    log('>>...一键发布完成')
+    pass
+
+
 async def main():
     global msg_box
 
@@ -324,12 +344,13 @@ async def main():
     put_markdown('## {0}'.format(project_name))
 
     put_table([
+        [put_buttons(['一键发布'], onclick=partial(one_key)), ''],
         ['更新资源和代码', put_buttons(['更新'], onclick=partial(update))],
-        ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
-        ['编译代码', put_buttons(['编译'], onclick=partial(build))],
-        ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
         ['打包动画', put_buttons(['打包动画'], onclick=partial(pack_ani))],
-        [put_link('版本服地址（枪战2）', url='http://192.168.61.64:5555/index.html', new_window=True), '']
+        ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
+        ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
+        ['编译代码', put_buttons(['编译'], onclick=partial(build))],
+        [put_link('版本服地址（枪战2）', url='http://192.168.61.64:5555/index.html', new_window=True), ''],
     ])
 
     put_markdown('## 日志信息')
