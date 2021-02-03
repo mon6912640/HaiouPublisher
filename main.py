@@ -403,7 +403,8 @@ if __name__ == '__main__':
     if args.port is not None:
         port = args.port
 
-    print('==== 配置参数 ====')
+    print('===== 配置参数 ====')
+    print('==================')
     print(project_name)
     print(root_work)
     print(url_proto)
