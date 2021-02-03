@@ -99,6 +99,7 @@ def update(btn_val=None):
     log(print_now())
     log(">>开始更新...请耐心等待...")
     run_cmd('svn up {0}'.format(root_work), '更新错误')
+    log('>>...更新完毕')
 
 
 def protocol(btn_val=None):
@@ -348,7 +349,7 @@ def one_key(btn_val=None):
     protocol()
     pack_cfg(True)
     build()
-    log('>>...一键发布完成')
+    log('>><font color="#0000ff">...一键发布完成</font>')
     pass
 
 
@@ -382,9 +383,9 @@ async def main():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='帮助信息')
     parser.add_argument('--project', type=str, default='默认项目名', help='项目名')
-    parser.add_argument('--root', type=int, default=None, help='项目根目录')
-    parser.add_argument('--proto', type=int, default=None, help='协议url地址')
-    parser.add_argument('--cfg', type=int, default=None, help='策划配置表目录')
+    parser.add_argument('--root', type=str, default=None, help='项目根目录')
+    parser.add_argument('--proto', type=str, default=None, help='协议url地址')
+    parser.add_argument('--cfg', type=str, default=None, help='策划配置表目录')
     parser.add_argument('--port', type=int, default=5000, help='访问端口')
 
     args = parser.parse_args()
@@ -402,6 +403,14 @@ if __name__ == '__main__':
     if args.port is not None:
         port = args.port
 
+    print('==== 配置参数 ====')
+    print(project_name)
+    print(root_work)
+    print(url_proto)
+    print(cfg_source)
+    print(port)
+    print('==================')
+
     while True:
         root_path = Path(root_work)
         if not root_path.exists():
@@ -412,8 +421,9 @@ if __name__ == '__main__':
 
     if ok_flag:
         my_ip = get_host_ip()
-        print('服务器启动成功...')
-        print('访问地址：http://{0}:{1}'.format(my_ip, port))
+        print('服务器启动成功...（关闭本窗口即关闭服务器）')
+        print('访问地址：\nhttp://{0}:{1}'.format(my_ip, port))
+        print('==================')
         start_server(main, debug=True, port=port)
     else:
         print('脚本参数有误，服务器启动失败')
