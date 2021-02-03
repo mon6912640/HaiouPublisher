@@ -54,7 +54,7 @@ def print_now():
     return '>{0}'.format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
 
 
-def run_cmd(cmd, err_str):
+def run_cmd(cmd, err_str, showlog=True):
     """
     运行外部命令行
     :param cmd:
@@ -74,8 +74,9 @@ def run_cmd(cmd, err_str):
             out_encoding = locale.getdefaultlocale()[1]
             out_text = out_bytes.decode(out_encoding)
         finally:
-            log('>>`{0}`'.format(err_str))
-            log('>><font color="#ff0000">{0}</font>'.format(out_text))
+            if showlog:
+                log('>>`{0}`'.format(err_str))
+                log('>><font color="#ff0000">{0}</font>'.format(out_text))
         return 1
     else:
         try:
@@ -85,7 +86,8 @@ def run_cmd(cmd, err_str):
             out_encoding = locale.getdefaultlocale()[1]
             out_text = out_bytes.decode(out_encoding)
         finally:
-            log('>>{0}'.format(out_text))
+            if showlog:
+                log('>>{0}'.format(out_text))
         return 0
 
 
@@ -343,6 +345,121 @@ def pack_ani(btn_val=None):
     log('>>...动画配置打包完毕')
 
 
+ext_type_map = {
+    '.png': 'image',
+    '.jpg': 'image',
+    '.jpeg': 'image',
+    '.gif': 'image',
+
+    '.mp3': 'sound',
+    '.wav': 'sound',
+
+    '.json': 'json',
+
+    '.txt': 'text',
+
+    '.xml': 'xml',
+}
+
+
+def get_type(p_suffix):
+    if p_suffix in ext_type_map:
+        return ext_type_map[p_suffix]
+    else:
+        return 'bin'
+
+
+def update_bone(btn_val=None):
+    modify_default(['boneAnimation', 'UI'])
+
+
+def modify_default(paths):
+    """
+    修改default文件
+    :param paths:相对resource目录的路径列表
+    :return:
+    """
+    path_default = Path(root_work, 'resource/default.res.json')
+    path_res = Path(root_work, 'resource')
+    path_list = []
+    for v in paths:
+        pv = Path(path_res, v)
+        if pv.exists():
+            path_list.append(pv)
+            run_cmd('svn up {0}'.format(str(pv)), '更新错误')
+    if len(path_list) < 1:
+        return
+    if not path_default.exists():
+        error('default.res.json不存在')
+        return
+    # 先删除default文件，避免冲突
+    path_default.unlink()
+    # svn恢复default文件，避免冲突
+    run_cmd('svn revert {0}'.format(str(path_default)), '恢复错误')
+
+    str_json = path_default.read_text(encoding='utf-8')
+    obj_default = json.loads(str_json)
+
+    del_flag = False  # default删除标识
+    new_list = []
+    for v in obj_default['resources']:
+        path_obj = path_res / v['url']
+        if path_obj.exists():
+            new_list.append(v)
+    if len(obj_default['resources']) != len(new_list):
+        obj_default['resources'] = new_list
+        del_flag = True
+
+    obj_map = {}
+    key_obj_map = {}
+    for v in new_list:
+        url = v['url']
+        if url not in obj_map:
+            obj_map[url] = v
+            key_obj_map[v['name']] = v
+
+    add_flag = False  # default新增标识
+    list_file = []
+    for v in path_list:
+        list_file += sorted(v.rglob('*.*'))
+    for v in list_file:
+        # 计算相对路径
+        url = v.relative_to(path_res).as_posix()
+        if url in obj_map:
+            pass
+        else:
+            # parent_dir = v.parent.relative_to(path_res)
+            if v.parent.name == 'UI':  # fgui的资源需要做特殊处理
+                name = v.name.split('.')[0]
+            else:
+                name = v.name.replace('.', '_')
+            t_type = get_type(v.suffix)
+            obj = {'url': url, 'type': t_type, 'name': name}
+            obj_default['resources'].append(obj)
+            obj_map[url] = obj
+            if name in key_obj_map:
+                error('...[warning]出现重复资源命名 {0}'.format(name))
+            else:
+                key_obj_map[name] = obj
+            add_flag = True
+
+    if add_flag or del_flag:
+        if del_flag:
+            # 资源组中删除无用的key
+            groups = obj_default['groups']
+            for v in groups:
+                keys = v['keys'].split(',')
+                new_keys = []
+                for k in keys:
+                    if k in key_obj_map:
+                        new_keys.append(k)
+                if len(keys) != len(new_keys):
+                    v['keys'] = ','.join(new_keys)
+        str_result = json.dumps(obj_default, indent=4, ensure_ascii=False)
+        str_result = str_result.replace('    ', '\t')  # 把四个空格转换成\t
+        path_default.write_text(str_result)
+
+
 def one_key(btn_val=None):
     update()
     pack_ani()
@@ -362,6 +479,7 @@ async def main():
 
     put_table([
         [put_buttons(['一键发布'], onclick=partial(one_key)), ''],
+        ['更新骨骼', put_buttons(['更新'], onclick=partial(update_bone))],
         ['更新资源和代码', put_buttons(['更新'], onclick=partial(update))],
         ['打包动画', put_buttons(['打包动画'], onclick=partial(pack_ani))],
         ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
