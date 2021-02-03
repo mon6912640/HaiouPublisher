@@ -1,3 +1,4 @@
+import argparse
 import json
 import locale
 import subprocess
@@ -16,6 +17,7 @@ import bytes_util
 from bytes_util import *
 from haiou_protocol import VoProtocol
 
+project_name = '枪战2'
 root_work = 'I:/newQz/client/yxqz/'
 url_proto = 'http://192.168.61.142:8080/ProtocolNewQZ/'
 cfg_source = 'I:/newQz/策划/配置表/'
@@ -137,7 +139,7 @@ class VoKey:
     des = ''
 
     def parse_value(self, cell):
-        if self.key_type == 'INT':
+        if self.key_type == 'INT' or self.key_type == 'LONG':
             if cell.ctype == 2:  # number
                 if cell.value % 1 == 0.0:
                     value = int(cell.value)
@@ -145,7 +147,9 @@ class VoKey:
                     value = cell.value
             else:
                 value = 0
-        else:
+        elif self.key_type == 'JSON' or self.key_type == 'INT[][]':
+            value = json.loads(str(cell.value))
+        else:  # STRING
             if cell.ctype == 2:
                 if cell.value % 1 == 0.0:
                     value = str(int(cell.value))
@@ -265,7 +269,7 @@ def pack_cfg(btn_val):
 
     # print(obj_map)
     json_str = json.dumps(obj_map, ensure_ascii=False, separators=(',', ':'))
-    json_path = Path(root_work, 'resource/config/config1.json')
+    json_path = Path(root_work, 'resource/config/config0.json')
     json_path.write_text(json_str, encoding='utf-8')
 
     ts1_path = Path(root_work, 'src/config/IConfig.ts')
@@ -283,7 +287,6 @@ def pack_cfg(btn_val):
               + '}'
     ts2_path = Path(root_work, 'src/config/Config.ts')
     ts2_path.write_text(ts2_str, encoding='utf-8')
-
     log('>>...配置打包完毕')
 
 
@@ -316,16 +319,17 @@ def pack_ani(btn_val):
 async def main():
     global msg_box
 
-    set_env(title="前端版本服工具")
+    set_env(title='前端版本服工具({0})'.format(project_name))
+
+    put_markdown('## {0}'.format(project_name))
 
     put_table([
-        ['新枪战', ''],
         ['更新资源和代码', put_buttons(['更新'], onclick=partial(update))],
         ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
         ['编译代码', put_buttons(['编译'], onclick=partial(build))],
         ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
         ['打包动画', put_buttons(['打包动画'], onclick=partial(pack_ani))],
-        [put_link('版本服地址（新枪战）', url='http://192.168.61.64:5555/index.html', new_window=True), '']
+        [put_link('版本服地址（枪战2）', url='http://192.168.61.64:5555/index.html', new_window=True), '']
     ])
 
     put_markdown('## 日志信息')
@@ -339,6 +343,33 @@ async def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='帮助信息')
+    parser.add_argument('--project', type=str, default='默认项目名', help='项目名')
+    parser.add_argument('--root', type=int, default=None, help='项目根目录')
+    parser.add_argument('--proto', type=int, default=None, help='协议url地址')
+    parser.add_argument('--cfg', type=int, default=None, help='策划配置表目录')
+
+    args = parser.parse_args()
+
+    ok_flag = True
+
+    if args.project is not None:
+        project_name = args.project
+    if args.root is not None:
+        root_work = args.root
+    if args.proto is not None:
+        url_proto = args.proto
+    if args.cfg is not None:
+        cfg_source = args.cfg
+
+    while True:
+        root_path = Path(root_work)
+        if not root_path.exists():
+            print('项目根目录不存在')
+            ok_flag = False
+            break
+        break
+
     start_server(main, debug=True, port=5000)
 
 # pywebio github at https://github.com/wang0618/PyWebIO
