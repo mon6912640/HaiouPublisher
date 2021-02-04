@@ -12,7 +12,7 @@ import requests
 import xlrd
 from pywebio import start_server
 from pywebio.output import *
-from pywebio.session import hold, set_env, run_js
+from pywebio.session import hold, set_env, run_js, data
 
 import bytes_util
 from bytes_util import *
@@ -40,7 +40,7 @@ def get_host_ip():
 
 
 def log(content, scope=None):
-    msg_box.append(put_markdown(content))
+    data().msg_box.append(put_markdown(content))
     run_js(
         '$("#pywebio-scope-content>div").stop().animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
     # pprint(content)
@@ -175,11 +175,11 @@ class VoKey:
                 else:
                     value = cell.value
             else:
-                value = 0
+                value = int(cell.value)
         elif self.key_type == 'JSON' or self.key_type == 'INT[][]':
             value = json.loads(str(cell.value))
         else:  # STRING
-            if cell.ctype == 2:
+            if cell.ctype == 2:  # number
                 if cell.value % 1 == 0.0:
                     value = str(int(cell.value))
                 else:
@@ -477,8 +477,6 @@ def one_key(btn_val=None):
 
 
 async def main():
-    global msg_box
-
     set_env(title='前端版本服工具({0})'.format(project_name))
 
     put_markdown('## {0}'.format(project_name))
@@ -495,9 +493,9 @@ async def main():
     ])
 
     put_markdown('## 日志信息')
-    msg_box = output()
+    data().msg_box = output()
     with use_scope('content'):
-        style(put_scrollable(msg_box, max_height=400), 'height:400px')
+        style(put_scrollable(data().msg_box, max_height=400), 'height:400px')
         pass
 
     # 这句是保持网页连接状态，否则按钮点击的回调不能正常显示
