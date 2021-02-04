@@ -370,7 +370,10 @@ def get_type(p_suffix):
 
 
 def update_bone(btn_val=None):
+    log(print_now())
+    log(">>开始更新骨骼资源...请耐心等待...")
     modify_default(['boneAnimation', 'UI'], True)
+    log(">>...骨骼资源更新并打包完毕")
 
 
 def modify_default(paths, showlog=False):
