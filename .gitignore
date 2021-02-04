@@ -227,3 +227,6 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+/test.py
+/chat_room.py
+/output_usage.py
