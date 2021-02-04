@@ -370,10 +370,10 @@ def get_type(p_suffix):
 
 
 def update_bone(btn_val=None):
-    modify_default(['boneAnimation', 'UI'])
+    modify_default(['boneAnimation', 'UI'], True)
 
 
-def modify_default(paths):
+def modify_default(paths, showlog=False):
     """
     修改default文件
     :param paths:相对resource目录的路径列表
@@ -386,16 +386,17 @@ def modify_default(paths):
         pv = Path(path_res, v)
         if pv.exists():
             path_list.append(pv)
-            run_cmd('svn up {0}'.format(str(pv)), '更新错误')
+            run_cmd('svn up {0}'.format(str(pv)), '更新错误', showlog=showlog)
     if len(path_list) < 1:
         return
     if not path_default.exists():
-        error('default.res.json不存在')
+        if showlog:
+            error('default.res.json不存在')
         return
     # 先删除default文件，避免冲突
     path_default.unlink()
     # svn恢复default文件，避免冲突
-    run_cmd('svn revert {0}'.format(str(path_default)), '恢复错误')
+    run_cmd('svn revert {0}'.format(str(path_default)), '恢复错误', showlog=showlog)
 
     str_json = path_default.read_text(encoding='utf-8')
     obj_default = json.loads(str_json)
@@ -438,7 +439,8 @@ def modify_default(paths):
             obj_default['resources'].append(obj)
             obj_map[url] = obj
             if name in key_obj_map:
-                error('...[warning]出现重复资源命名 {0}'.format(name))
+                if showlog:
+                    error('...[warning]出现重复资源命名 {0}'.format(name))
             else:
                 key_obj_map[name] = obj
             add_flag = True
@@ -462,6 +464,7 @@ def modify_default(paths):
 
 def one_key(btn_val=None):
     update()
+    update_bone()
     pack_ani()
     protocol()
     pack_cfg(True)
