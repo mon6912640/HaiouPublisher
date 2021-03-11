@@ -18,10 +18,10 @@ import bytes_util
 from bytes_util import *
 from haiou_protocol import VoProtocol
 
-project_name = '枪战2'
-root_work = 'I:/newQz/client/yxqz/'
-url_proto = 'http://192.168.61.142:8080/ProtocolNewQZ/'
-cfg_source = 'I:/newQz/策划/配置表/'
+project_name = '三国2'
+root_work = 'I:/sanguo2/client/sanguo2/'
+url_proto = 'http://192.168.61.142:8080/ProtocolSgzjTwo/'
+cfg_source = 'I:/sanguo2/策划/配置表/'
 port = 5000
 
 
@@ -289,8 +289,9 @@ def pack_cfg(btn_val=None):
             for kv in vo.key_list:
                 try:
                     value = kv.parse_value(sheet.cell(i, kv.col_index))
-                except:
-                    error('出错 {0} {1}行{2}列'.format(v.name, i, kv.col_index))
+                except BaseException as err:
+                    error('{0} 表格数值类型解析错误，请检查 {1}行{2}列\n'.format(v.name, i + 1, kv.col_index + 1))
+                    value_list.append(sheet.cell(i, kv.col_index).value)
                 else:
                     value_list.append(value)
             obj['data'].append(value_list)
