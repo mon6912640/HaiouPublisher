@@ -1,6 +1,7 @@
 import argparse
 import json
 import locale
+import shutil
 import socket
 import subprocess
 import time
@@ -97,9 +98,36 @@ def build(btn_val=None):
     run_cmd('egret clean {0} -sourcemap'.format(root_work), '编译错误')
 
 
+def clean(btn_val=None):
+    """
+    清理（更新前执行的清理资源的操作，避免冲突）
+    :param btn_val:
+    :return:
+    """
+    plist = [
+        Path(root_work, 'src/protocol/IProtocol.ts'),
+        Path(root_work, 'src/config'),
+        Path(root_work, 'resource/config'),
+        Path(root_work, 'resource/ani.json'),
+        Path(root_work, 'resource/default.res.json'),
+    ]
+    for v in plist:
+        if not v.exists():
+            continue
+        if v.is_dir():
+            # 删除目录
+            shutil.rmtree(str(v), True)
+        else:
+            # 删除文件
+            v.unlink()
+        pass
+    pass
+
+
 def update(btn_val=None):
     log(print_now())
     log(">>开始更新...请耐心等待...")
+    clean()
     run_cmd('svn up {0}'.format(root_work), '更新错误')
     log('>>...更新完毕')
 
@@ -491,6 +519,7 @@ async def main():
         ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
         ['编译代码', put_buttons(['编译'], onclick=partial(build))],
         [put_link('版本服地址（枪战2）', url='http://192.168.61.64:5555/index.html', new_window=True), ''],
+        [put_link('版本服地址（三国2）', url='http://192.168.61.64:5530/index1.html', new_window=True), ''],
     ])
 
     put_markdown('## 日志信息')
