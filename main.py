@@ -124,11 +124,37 @@ def clean(btn_val=None):
     pass
 
 
+def update_res(btn_val=None):
+    """
+    更新资源
+    :param btn_val:
+    :return:
+    """
+    log(print_now())
+    log(">>开始更新...请耐心等待...")
+    run_cmd('svn up --accept p {0}'.format(root_work + 'resource'), '更新错误')
+    log('>>...更新完毕')
+    pass
+
+
+def update_code(btn_val=None):
+    """
+    更新代码
+    :param btn_val:
+    :return:
+    """
+    log(print_now())
+    log(">>开始更新...请耐心等待...")
+    run_cmd('svn up --accept p {0}'.format(root_work + 'src'), '更新错误')
+    log('>>...更新完毕')
+    pass
+
+
 def update(btn_val=None):
     log(print_now())
     log(">>开始更新...请耐心等待...")
     clean()
-    run_cmd('svn up {0}'.format(root_work), '更新错误')
+    run_cmd('svn up --accept p {0}'.format(root_work), '更新错误')
     log('>>...更新完毕')
 
 
@@ -232,7 +258,7 @@ def pack_cfg(btn_val=None):
     log(print_now())
     if btn_val:
         log(">>更新配置...请耐心等待...")
-        runcode = run_cmd('svn up {0}'.format(cfg_source), '更新错误')
+        runcode = run_cmd('svn up --accept p {0}'.format(cfg_source), '更新错误')
         if runcode != 0:
             return
     log(">>开始打包配置...请耐心等待...")
@@ -401,7 +427,8 @@ def get_type(p_suffix):
 def update_bone(btn_val=None):
     log(print_now())
     log(">>开始更新骨骼资源...请耐心等待...")
-    modify_default(['boneAnimation', 'UI'], True)
+    # modify_default(['boneAnimation', 'UI'], True)
+    modify_default(['boneAnimation'], True)
     log(">>...骨骼资源更新并打包完毕")
 
 
@@ -418,17 +445,17 @@ def modify_default(paths, showlog=False):
         pv = Path(path_res, v)
         if pv.exists():
             path_list.append(pv)
-            run_cmd('svn up {0}'.format(str(pv)), '更新错误', showlog=showlog)
+            run_cmd('svn up --accept p {0}'.format(str(pv)), '更新错误', showlog=showlog)
     if len(path_list) < 1:
         return
     if not path_default.exists():
         if showlog:
             error('default.res.json不存在')
         return
-    # 先删除default文件，避免冲突
-    path_default.unlink()
-    # svn恢复default文件，避免冲突
-    run_cmd('svn revert {0}'.format(str(path_default)), '恢复错误', showlog=showlog)
+    # # 先删除default文件，避免冲突
+    # path_default.unlink()
+    # # svn恢复default文件，避免冲突
+    # run_cmd('svn revert {0}'.format(str(path_default)), '恢复错误', showlog=showlog)
 
     str_json = path_default.read_text(encoding='utf-8')
     obj_default = json.loads(str_json)
@@ -513,7 +540,8 @@ async def main():
     put_table([
         [put_buttons(['一键发布'], onclick=partial(one_key)), ''],
         ['更新骨骼', put_buttons(['更新'], onclick=partial(update_bone))],
-        ['更新资源和代码', put_buttons(['更新'], onclick=partial(update))],
+        ['更新资源和代码', put_buttons(['清理并更新工作目录', '更新资源（不清理）', '更新代码（不清理）'],
+                                onclick=[partial(update), partial(update_res), partial(update_code)])],
         ['打包动画', put_buttons(['打包动画'], onclick=partial(pack_ani))],
         ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
         ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
