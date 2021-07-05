@@ -23,7 +23,6 @@ project_name = '三国2'
 root_work = 'I:/sanguo2/client/sanguo2/'
 url_proto = 'http://192.168.61.142:8080/ProtocolSgzjTwo/'
 cfg_source = 'I:/sanguo2/策划/配置表/'
-port = 5000
 
 
 def get_host_ip():
@@ -38,6 +37,17 @@ def get_host_ip():
     finally:
         s.close()
     return ip
+
+
+class VoProject:
+    project_name = ''
+    root_work = ''
+    url_proto = ''
+    cfg_source = ''
+    port = 0
+
+
+project_list: List[VoProject] = []
 
 
 class VoKey:
@@ -509,20 +519,21 @@ async def main():
         log('>>...动画配置打包完毕')
 
     def one_key(btn_val=None):
-        update()
-        update_bone()
-        pack_ani()
-        protocol()
-        pack_cfg(True)
-        build()
-        log('>><font color="#0000ff">...一键发布完成</font>')
+        # update()
+        # update_bone()
+        # pack_ani()
+        # protocol()
+        # pack_cfg(True)
+        # build()
+        # log('>><font color="#0000ff">...一键发布完成</font>')
+        popup('通知', '一键发布完成', size=PopupSize.SMALL)
         pass
 
     set_env(title='前端版本服工具({0})'.format(project_name))
 
     put_markdown('## {0}'.format(project_name))
 
-    put_table([
+    right = put_table([
         [put_buttons(['一键发布'], onclick=partial(one_key)), ''],
         ['更新骨骼', put_buttons(['更新'], onclick=partial(update_bone))],
         ['更新资源和代码', put_buttons(['清理并更新工作目录', '更新资源（不清理）', '更新代码（不清理）'],
@@ -535,6 +546,14 @@ async def main():
         [put_link('版本服地址（三国2）', url='http://192.168.61.64:5530/index1.html', new_window=True), ''],
     ])
 
+    left = put_column([
+        put_buttons([dict(label='text1', value=1, color='success')], onclick=...),
+        put_buttons([dict(label='text2', value=2, color='success')], onclick=...),
+        put_buttons([dict(label='text3', value=3, color='success')], onclick=...),
+    ], size='50px 50px 50px')
+
+    put_row([left, None, right], size='10% 10px 90%')
+
     put_markdown('## 日志信息')
     msg_box = output()
     with use_scope('content'):
@@ -545,8 +564,59 @@ async def main():
     await hold()
 
 
+def init_project(args):
+    ok_flag = True
+
+    obj = args
+
+    if type(args) == dict:
+        pass
+    else:
+        obj = vars(args)
+
+    vo = VoProject()
+
+    while True:
+        if obj['project']:
+            vo.project_name = obj['project']
+        else:
+            ok_flag = False
+            break
+
+        if obj['root']:
+            vo.root_work = obj['root']
+            root_path = Path(vo.root_work)
+            if not root_path.exists():
+                print('[warning] {0} 项目根目录不存在'.format(vo.project_name))
+                ok_flag = False
+                break
+        else:
+            ok_flag = False
+            break
+
+        if obj['proto']:
+            vo.url_proto = obj['proto']
+        else:
+            ok_flag = False
+            break
+
+        if obj['cfg']:
+            vo.cfg_source = obj['cfg']
+        else:
+            ok_flag = False
+            break
+
+        break
+
+    if ok_flag:
+        project_list.append(vo)
+
+    return ok_flag
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='帮助信息')
+    parser.add_argument('--cfgs', type=str, default=None, help='多项目配置')
     parser.add_argument('--project', type=str, default='默认项目名', help='项目名')
     parser.add_argument('--root', type=str, default=None, help='项目根目录')
     parser.add_argument('--proto', type=str, default=None, help='协议url地址')
@@ -554,45 +624,34 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=5000, help='访问端口')
 
     args = parser.parse_args()
+    port = args.port
 
-    ok_flag = True
+    if args.cfgs is not None:
+        path_cfgs = Path(args.cfgs)
+        if path_cfgs.exists():
+            str_cfgs = path_cfgs.read_text(encoding='utf-8')
+            obj_cfgs = json.loads(str_cfgs)
+            for v in obj_cfgs:
+                init_project(v)
 
-    if args.project is not None:
-        project_name = args.project
-    if args.root is not None:
-        root_work = args.root
-    if args.proto is not None:
-        url_proto = args.proto
-    if args.cfg is not None:
-        cfg_source = args.cfg
-    if args.port is not None:
-        port = args.port
+    init_project(args)
 
-    print('===== 配置参数 ====')
-    print('==================')
-    print(project_name)
-    print(root_work)
-    print(url_proto)
-    print(cfg_source)
-    print(port)
-    print('==================')
+    if len(project_list) > 0:
+        for k, v in enumerate(project_list):
+            print('===== 配置{0}参数 ====='.format(k + 1))
+            print(v.project_name)
+            print(v.root_work)
+            print(v.url_proto)
+            print(v.cfg_source)
+            print('=====================\n')
 
-    while True:
-        root_path = Path(root_work)
-        if not root_path.exists():
-            print('项目根目录不存在')
-            ok_flag = False
-            break
-        break
-
-    if ok_flag:
-        my_ip = get_host_ip()
-        print('服务器启动成功...（关闭本窗口即关闭服务器）')
-        print('访问地址：\nhttp://{0}:{1}'.format(my_ip, port))
-        print('==================')
-        start_server(main, debug=True, port=port)
+            my_ip = get_host_ip()
+            print('服务器启动成功...（关闭本窗口即关闭服务器）')
+            print('访问地址：\nhttp://{0}:{1}'.format(my_ip, port))
+            print('==================')
+            start_server(main, debug=True, port=port)
     else:
-        print('脚本参数有误，服务器启动失败')
+        print('[error] 服务器启动失败，初始化配置失败，请检测配置格式或者数据')
 
 # pywebio github at https://github.com/wang0618/PyWebIO
 # pywebio docs at https://pywebio.readthedocs.io/zh_CN/latest/index.html
