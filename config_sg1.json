@@ -1,0 +1,18 @@
+{
+  "title": "前端版本工具",
+  "projects": [
+    {
+      "project": "三国1微端",
+      "root": "I:/work_haiou/client/sanguo/",
+      "proto": "http://192.168.61.210:8080/ProtocolXSGZJ/",
+      "cfg": "I:/work_haiou/策划/配置表/",
+      "old": 1,
+      "urls": [
+        [
+          "版本服地址（三国1微端）",
+          "http://192.168.61.213:5714/"
+        ]
+      ]
+    }
+  ]
+}

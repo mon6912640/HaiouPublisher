@@ -42,6 +42,8 @@ class VoProject:
     url_proto = ''
     cfg_source = ''
     port = 0
+    # 老项目标识
+    old = 0
     urls = []
 
     def __init__(self):
@@ -227,10 +229,14 @@ async def main():
         log('>>...更新完毕')
 
     def protocol(btn_val=None):
+        cur_project: VoProject = local.cur_project
+        if cur_project.old:
+            error('老项目不需要导出协议')
+            return
         log(print_now())
         log(">>导出协议...请耐心等待...")
         try:
-            response = requests.get(local.cur_project.url_proto + '/protocol.do?method=proExtExport', timeout=2)
+            response = requests.get(cur_project.url_proto + '/protocol.do?method=proExtExport', timeout=2)
         except:
             error('请求超时，请检查协议地址是否正确')
             return
@@ -272,7 +278,7 @@ async def main():
             bin_by += bytes_util.write_utf(vo.get_protocol_variable())
 
         bin_by = bytes_util.write_int(proto_count) + bin_by
-        root_url = local.cur_project.root_work
+        root_url = cur_project.root_work
         bin_path = Path(root_url, 'resource/config/clientProtocol.bin')
         with bin_path.open('wb') as fs:
             fs.write(bin_by)
@@ -284,6 +290,10 @@ async def main():
         log('>>...协议生成完毕')
 
     def update_bone(btn_val=None):
+        cur_project: VoProject = local.cur_project
+        if cur_project.old:
+            error('老项目不需要更新骨骼资源')
+            return
         log(print_now())
         log(">>开始更新骨骼资源...请耐心等待...")
         # modify_default(['boneAnimation', 'UI'], True)
@@ -549,14 +559,24 @@ async def main():
         return vo
 
     def one_key(btn_val=None):
-        update()
-        update_bone()
-        pack_ani()
-        protocol()
-        pack_cfg(True)
-        build()
+        cur_project: VoProject = local.cur_project
+        if cur_project.old:  # 老项目
+            # 老项目不用更新骨骼和导出协议
+            update()
+            pack_ani()
+            pack_cfg(True)
+            build()
+            pass
+        else:  # 新项目
+            update()
+            update_bone()
+            pack_ani()
+            protocol()
+            pack_cfg(True)
+            build()
+            pass
         log('>><font color="#0000ff">...一键发布完成</font>')
-        popup('通知', '{0} 一键发布完成'.format(local.cur_project.project_name), size=PopupSize.SMALL)
+        popup('通知', '{0} 一键发布完成'.format(cur_project.project_name), size=PopupSize.SMALL)
 
     name_com = output()
     urls_com = output()
@@ -648,6 +668,9 @@ def init_project(args):
 
     if 'urls' in obj:
         vo.urls = obj['urls'];
+
+    if 'old' in obj:
+        vo.old = obj['old']
 
     if ok_flag:
         project_list.append(vo)
