@@ -1,0 +1,33 @@
+{
+  "title": "前端版本工具",
+  "projects": [
+    {
+      "project": "三国2本地",
+      "root": "I:/sanguo2/client/sanguo2/",
+      "proto": "http://192.168.61.142:8080/ProtocolSgzjTwo/",
+      "cfg": "I:/sanguo2/策划/配置表/",
+      "urls": [
+        [
+          "版本服地址（三国2）",
+          "http://192.168.61.64:5530/index1.html"
+        ],
+        [
+          "版本服地址（三国2）",
+          "http://192.168.61.64:5530/index1.html"
+        ]
+      ]
+    },
+    {
+      "project": "枪战2",
+      "root": "I:/newQz/client/yxqz/",
+      "proto": "http://192.168.61.142:8080/ProtocolNewQZ/",
+      "cfg": "I:/newQz/策划/配置表/",
+      "urls": [
+        [
+          "版本服地址（枪战2）",
+          "http://192.168.61.64:5555/index.html"
+        ]
+      ]
+    }
+  ]
+}

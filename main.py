@@ -42,6 +42,10 @@ class VoProject:
     url_proto = ''
     cfg_source = ''
     port = 0
+    urls = []
+
+    def __init__(self):
+        self.urls = []
 
 
 project_list: List[VoProject] = []
@@ -526,6 +530,13 @@ async def main():
         local.cur_project = vo
         set_env(title='{0}({1})'.format(title, vo.project_name))
         name_com.reset(put_markdown('## {0}'.format(vo.project_name)))
+
+        links = []
+        if vo.urls and len(vo.urls) > 0:
+            for v in vo.urls:
+                links.append(put_link(v[0], url=v[1], new_window=True))
+        urls_com.reset(put_column(links))
+
         for i in range(len(tabs)):
             v = tabs[i]
             vo = project_list[i]
@@ -548,6 +559,7 @@ async def main():
         popup('通知', '{0} 一键发布完成'.format(local.cur_project.project_name), size=PopupSize.SMALL)
 
     name_com = output()
+    urls_com = output()
 
     right = put_table([
         [name_com, put_buttons([dict(label='一键发布', value=0, color='warning')], onclick=partial(one_key))],
@@ -558,8 +570,7 @@ async def main():
         ['导出协议', put_buttons(['协议'], onclick=partial(protocol))],
         ['打包配置', put_buttons([('更新并打包', True), ('只打包配置', False)], onclick=partial(pack_cfg))],
         ['编译代码', put_buttons(['编译'], onclick=partial(build))],
-        [put_link('版本服地址（枪战2）', url='http://192.168.61.64:5555/index.html', new_window=True), ''],
-        [put_link('版本服地址（三国2）', url='http://192.168.61.64:5530/index1.html', new_window=True), ''],
+        ['相关地址', urls_com],
     ])
 
     # 根据配置的项目列表显示tab按钮
@@ -584,6 +595,8 @@ async def main():
         pass
 
     on_tab_click(0)
+
+    cur_project = local.cur_project
 
     # 这句是保持网页连接状态，否则按钮点击的回调不能正常显示
     await hold()
@@ -632,6 +645,9 @@ def init_project(args):
             break
 
         break
+
+    if 'urls' in obj:
+        vo.urls = obj['urls'];
 
     if ok_flag:
         project_list.append(vo)
