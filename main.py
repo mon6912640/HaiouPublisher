@@ -13,16 +13,13 @@ import requests
 import xlrd
 from pywebio import start_server
 from pywebio.output import *
-from pywebio.session import hold, set_env
+from pywebio.session import hold, set_env, info, local
 
 import bytes_util
 from bytes_util import *
 from haiou_protocol import VoProtocol
 
-project_name = '三国2'
-root_work = 'I:/sanguo2/client/sanguo2/'
-url_proto = 'http://192.168.61.142:8080/ProtocolSgzjTwo/'
-cfg_source = 'I:/sanguo2/策划/配置表/'
+title = '前端版本工具'
 
 
 def get_host_ip():
@@ -114,11 +111,11 @@ def get_type(p_suffix):
 
 
 async def main():
+    def get_user_ip():
+        return info.user_ip
+
     def log(p_content, scope=None):
         msg_box.append(put_markdown(p_content))
-        # run_js(
-        #     '$("#pywebio-scope-content>div").stop().animate({ scrollTop: $("#pywebio-scope-content>div").prop("scrollHeight")}, 1000)')  # hack: to scroll bottom
-        # pprint(content)
 
     def error(p_content):
         log('<font color="#ff0000">{0}</font>'.format(p_content))
@@ -134,8 +131,9 @@ async def main():
         :return:返回非零则执行错误
         """
         try:
-            out_bytes = subprocess.check_output(cmd, shell=True,
-                                                stderr=subprocess.STDOUT)
+            # 如果 capture_output 设为 true，stdout 和 stderr 将会被捕获。在使用时，内置的 Popen 对象将自动用 stdout=PIPE 和 stderr=PIPE 创建。stdout 和 stderr 参数不应当与 capture_output 同时提供。如果你希望捕获并将两个流合并在一起，使用 stdout=PIPE 和 stderr=STDOUT 来代替 capture_output。
+            out_bytes = subprocess.run(cmd, text=False, check=True, shell=True, stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT).stdout
         except subprocess.CalledProcessError as e:
             out_bytes = e.output
             code = e.returncode
@@ -165,7 +163,7 @@ async def main():
     def build(btn_val=None):
         log(print_now())
         log(">>开始编译...请耐心等待...")
-        run_cmd('egret clean {0} -sourcemap'.format(root_work), '编译错误')
+        run_cmd('egret clean {0} -sourcemap'.format(local.cur_project.root_work), '编译错误')
 
     def clean(btn_val=None):
         """
@@ -173,12 +171,13 @@ async def main():
         :param btn_val:
         :return:
         """
+        root_url = local.cur_project.root_work
         plist = [
-            Path(root_work, 'src/protocol/IProtocol.ts'),
-            Path(root_work, 'src/config'),
-            Path(root_work, 'resource/config'),
-            Path(root_work, 'resource/ani.json'),
-            Path(root_work, 'resource/default.res.json'),
+            Path(root_url, 'src/protocol/IProtocol.ts'),
+            Path(root_url, 'src/config'),
+            Path(root_url, 'resource/config'),
+            Path(root_url, 'resource/ani.json'),
+            Path(root_url, 'resource/default.res.json'),
         ]
         for v in plist:
             if not v.exists():
@@ -200,7 +199,7 @@ async def main():
         """
         log(print_now())
         log(">>开始更新...请耐心等待...")
-        run_cmd('svn up --accept p {0}'.format(root_work + 'resource'), '更新错误')
+        run_cmd('svn up --accept p {0}'.format(local.cur_project.root_work + 'resource'), '更新错误')
         log('>>...更新完毕')
         pass
 
@@ -212,7 +211,7 @@ async def main():
         """
         log(print_now())
         log(">>开始更新...请耐心等待...")
-        run_cmd('svn up --accept p {0}'.format(root_work + 'src'), '更新错误')
+        run_cmd('svn up --accept p {0}'.format(local.cur_project.root_work + 'src'), '更新错误')
         log('>>...更新完毕')
         pass
 
@@ -220,14 +219,14 @@ async def main():
         log(print_now())
         log(">>开始更新...请耐心等待...")
         clean()
-        run_cmd('svn up --accept p {0}'.format(root_work), '更新错误')
+        run_cmd('svn up --accept p {0}'.format(local.cur_project.root_work), '更新错误')
         log('>>...更新完毕')
 
     def protocol(btn_val=None):
         log(print_now())
         log(">>导出协议...请耐心等待...")
         try:
-            response = requests.get(url_proto + '/protocol.do?method=proExtExport', timeout=2)
+            response = requests.get(local.cur_project.url_proto + '/protocol.do?method=proExtExport', timeout=2)
         except:
             error('请求超时，请检查协议地址是否正确')
             return
@@ -269,11 +268,12 @@ async def main():
             bin_by += bytes_util.write_utf(vo.get_protocol_variable())
 
         bin_by = bytes_util.write_int(proto_count) + bin_by
-        bin_path = Path(root_work, 'resource/config/clientProtocol.bin')
+        root_url = local.cur_project.root_work
+        bin_path = Path(root_url, 'resource/config/clientProtocol.bin')
         with bin_path.open('wb') as fs:
             fs.write(bin_by)
 
-        code_path = Path(root_work, 'src/protocol/IProtocol.ts')
+        code_path = Path(root_url, 'src/protocol/IProtocol.ts')
         with code_path.open('wt', encoding='utf-8') as fs:
             fs.write(info)
 
@@ -292,8 +292,9 @@ async def main():
         :param paths:相对resource目录的路径列表
         :return:
         """
-        path_default = Path(root_work, 'resource/default.res.json')
-        path_res = Path(root_work, 'resource')
+        root_url = local.cur_project.root_work
+        path_default = Path(root_url, 'resource/default.res.json')
+        path_res = Path(root_url, 'resource')
         path_list = []
         for v in paths:
             pv = Path(path_res, v)
@@ -376,13 +377,13 @@ async def main():
 
     def pack_cfg(btn_val=None):
         log(print_now())
+        source_path = Path(local.cur_project.cfg_source)
         if btn_val:
             log(">>更新配置...请耐心等待...")
-            runcode = run_cmd('svn up --accept p {0}'.format(cfg_source), '更新错误')
+            runcode = run_cmd('svn up --accept p {0}'.format(str(source_path)), '更新错误')
             if runcode != 0:
                 return
         log(">>开始打包配置...请耐心等待...")
-        source_path = Path(cfg_source)
         list_file = sorted(source_path.rglob('*.xlsx'))
         vo_cfg_map = {}
         obj_map = {}
@@ -472,11 +473,12 @@ async def main():
             # break
 
         # print(obj_map)
+        root_url = local.cur_project.root_work
         json_str = json.dumps(obj_map, ensure_ascii=False, separators=(',', ':'))
-        json_path = Path(root_work, 'resource/config/config0.json')
+        json_path = Path(root_url, 'resource/config/config0.json')
         json_path.write_text(json_str, encoding='utf-8')
 
-        ts1_path = Path(root_work, 'src/config/IConfig.ts')
+        ts1_path = Path(root_url, 'src/config/IConfig.ts')
         ts1_path.write_text(ts1_str, encoding='utf-8')
 
         temp_ts2_str3 = '\tstatic dataLib;\n' \
@@ -489,14 +491,15 @@ async def main():
                   + temp_ts2_str3 \
                   + temp_ts2_str2 \
                   + '}'
-        ts2_path = Path(root_work, 'src/config/Config.ts')
+        ts2_path = Path(root_url, 'src/config/Config.ts')
         ts2_path.write_text(ts2_str, encoding='utf-8')
         log('>>...配置打包完毕')
 
     def pack_ani(btn_val=None):
         log(print_now())
         log(">>开始打包动画配置...请耐心等待...")
-        model_path = Path(root_work, 'resource/model/')
+        root_url = local.cur_project.root_work
+        model_path = Path(root_url, 'resource/model/')
         list_file = sorted(model_path.rglob('*.json'))
         ani_obj = {}
         for v in list_file:
@@ -514,27 +517,40 @@ async def main():
             key_name = v.name.split('.')[0]
             ani_obj[key_name] = json.loads(json_str)
         ani_json = json.dumps(ani_obj, ensure_ascii=False, separators=(',', ':'))
-        ani_path = Path(root_work, 'resource/ani.json')
+        ani_path = Path(root_url, 'resource/ani.json')
         ani_path.write_text(ani_json)
         log('>>...动画配置打包完毕')
 
+    def on_tab_click(btn_val):
+        vo = project_list[btn_val]
+        local.cur_project = vo
+        set_env(title='{0}({1})'.format(title, vo.project_name))
+        name_com.reset(put_markdown('## {0}'.format(vo.project_name)))
+        for i in range(len(tabs)):
+            v = tabs[i]
+            vo = project_list[i]
+            if i == btn_val:
+                v.reset(
+                    put_buttons([dict(label=vo.project_name, value=i, color='danger')], onclick=partial(on_tab_click)))
+            else:
+                v.reset(
+                    put_buttons([dict(label=vo.project_name, value=i, color='success')], onclick=partial(on_tab_click)))
+        return vo
+
     def one_key(btn_val=None):
-        # update()
-        # update_bone()
-        # pack_ani()
-        # protocol()
-        # pack_cfg(True)
-        # build()
-        # log('>><font color="#0000ff">...一键发布完成</font>')
-        popup('通知', '一键发布完成', size=PopupSize.SMALL)
-        pass
+        update()
+        update_bone()
+        pack_ani()
+        protocol()
+        pack_cfg(True)
+        build()
+        log('>><font color="#0000ff">...一键发布完成</font>')
+        popup('通知', '{0} 一键发布完成'.format(local.cur_project.project_name), size=PopupSize.SMALL)
 
-    set_env(title='前端版本服工具({0})'.format(project_name))
-
-    put_markdown('## {0}'.format(project_name))
+    name_com = output()
 
     right = put_table([
-        [put_buttons(['一键发布'], onclick=partial(one_key)), ''],
+        [name_com, put_buttons([dict(label='一键发布', value=0, color='warning')], onclick=partial(one_key))],
         ['更新骨骼', put_buttons(['更新'], onclick=partial(update_bone))],
         ['更新资源和代码', put_buttons(['清理并更新工作目录', '更新资源（不清理）', '更新代码（不清理）'],
                                 onclick=[partial(update), partial(update_res), partial(update_code)])],
@@ -546,19 +562,28 @@ async def main():
         [put_link('版本服地址（三国2）', url='http://192.168.61.64:5530/index1.html', new_window=True), ''],
     ])
 
-    left = put_column([
-        put_buttons([dict(label='text1', value=1, color='success')], onclick=...),
-        put_buttons([dict(label='text2', value=2, color='success')], onclick=...),
-        put_buttons([dict(label='text3', value=3, color='success')], onclick=...),
-    ], size='50px 50px 50px')
+    # 根据配置的项目列表显示tab按钮
+    tabs = []
+    str_size = ''
+    for i in range(len(project_list)):
+        v = project_list[i]
+        tab = output(put_buttons([dict(label=v.project_name, value=i, color='success')], onclick=partial(on_tab_click)))
+        tabs.append(tab)
+        if i == 0:
+            str_size += '50px'
+        else:
+            str_size += ' 50px'
+    left = put_column(tabs, size=str_size)
 
-    put_row([left, None, right], size='10% 10px 90%')
+    put_row([left, None, right], size='15% 10px 85%')
 
     put_markdown('## 日志信息')
     msg_box = output()
     with use_scope('content'):
         put_scrollable(msg_box, height=400, keep_bottom=True)
         pass
+
+    on_tab_click(0)
 
     # 这句是保持网页连接状态，否则按钮点击的回调不能正常显示
     await hold()
@@ -601,7 +626,7 @@ def init_project(args):
             break
 
         if obj['cfg']:
-            vo.cfg_source = obj['cfg']
+            vo.cfg_source = str(obj['cfg'])
         else:
             ok_flag = False
             break
@@ -631,7 +656,8 @@ if __name__ == '__main__':
         if path_cfgs.exists():
             str_cfgs = path_cfgs.read_text(encoding='utf-8')
             obj_cfgs = json.loads(str_cfgs)
-            for v in obj_cfgs:
+            title = obj_cfgs['title']
+            for v in obj_cfgs['projects']:
                 init_project(v)
 
     init_project(args)
@@ -644,12 +670,11 @@ if __name__ == '__main__':
             print(v.url_proto)
             print(v.cfg_source)
             print('=====================\n')
-
-            my_ip = get_host_ip()
-            print('服务器启动成功...（关闭本窗口即关闭服务器）')
-            print('访问地址：\nhttp://{0}:{1}'.format(my_ip, port))
-            print('==================')
-            start_server(main, debug=True, port=port)
+        server_ip = get_host_ip()
+        print('服务器启动成功...（关闭本窗口即关闭服务器）')
+        print('访问地址：\nhttp://{0}:{1}'.format(server_ip, port))
+        print('==================')
+        start_server(main, debug=True, port=port)
     else:
         print('[error] 服务器启动失败，初始化配置失败，请检测配置格式或者数据')
 
