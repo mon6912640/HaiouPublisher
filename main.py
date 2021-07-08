@@ -61,13 +61,7 @@ class VoKey:
 
     def parse_value(self, cell):
         if self.key_type == 'INT' or self.key_type == 'LONG':
-            if cell.ctype == 2:  # number
-                if cell.value % 1 == 0.0:
-                    value = int(cell.value)
-                else:
-                    value = cell.value
-            else:
-                value = int(cell.value)
+            value = int(cell.value)
         elif self.key_type == 'JSON' or self.key_type == 'INT[][]':
             value = json.loads(str(cell.value))
         else:  # STRING
