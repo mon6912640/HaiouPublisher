@@ -13,7 +13,7 @@ import requests
 import xlrd
 from pywebio import start_server
 from pywebio.output import *
-from pywebio.session import hold, set_env, info, local
+from pywebio.session import hold, set_env, info, local, run_js, eval_js
 
 import bytes_util
 from bytes_util import *
@@ -108,6 +108,17 @@ def get_type(p_suffix):
         return ext_type_map[p_suffix]
     else:
         return 'bin'
+
+
+def set_item(key, value):
+    key = info.user_ip + '#' + key
+    run_js('window.localStorage.setItem(key, value)', key=key, value=value)
+
+
+async def get_item(key):
+    key = info.user_ip + '#' + key
+    val = await eval_js('localStorage.getItem(key)', key=key)
+    return val
 
 
 async def main():
@@ -532,6 +543,7 @@ async def main():
     def on_tab_click(btn_val):
         vo = project_list[btn_val]
         local.cur_project = vo
+        set_item('tabIndex', btn_val)  # 记录当前页索引
         set_env(title='{0}({1})'.format(title, vo.project_name))
         name_com.reset(put_markdown('## {0}'.format(vo.project_name)))
 
@@ -606,9 +618,16 @@ async def main():
     msg_box = output()
     with use_scope('content'):
         put_scrollable(msg_box, height=400, keep_bottom=True)
-        pass
 
-    on_tab_click(0)
+    tab_str = await get_item('tabIndex')
+    if tab_str is None:
+        tab_index = 0;
+    else:
+        tab_index = int(tab_str)
+    if tab_index < len(project_list):
+        on_tab_click(tab_index)
+    else:
+        on_tab_click(0)
 
     cur_project = local.cur_project
 
