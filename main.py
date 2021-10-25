@@ -16,6 +16,7 @@ from pywebio.output import *
 from pywebio.session import hold, set_env, info, local, run_js, eval_js
 
 import bytes_util
+import common_util
 from bytes_util import *
 from haiou_protocol import VoProtocol
 
@@ -484,7 +485,9 @@ async def main():
                     try:
                         value = kv.parse_value(sheet.cell(i, kv.col_index))
                     except BaseException as err:
-                        error('{0} 表格数值类型解析错误，请检查 {1}行{2}列\n'.format(v.name, i + 1, kv.col_index + 1))
+                        col_num = kv.col_index + 1;
+                        col_num_str = common_util.covert_10_to_26(col_num)
+                        error('{0} 表格数值类型解析错误，请检查 {1}行{2}({3})列\n'.format(v.name, i + 1, col_num, col_num_str))
                         value_list.append(sheet.cell(i, kv.col_index).value)
                     else:
                         value_list.append(value)
