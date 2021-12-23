@@ -600,7 +600,6 @@ async def main():
                 config_change = True
         if config_change:
             obj_config['keys'] = ','.join(list_config_keys)
-        print(list_config_keys)
         str_result = json.dumps(obj_default, indent=4, ensure_ascii=False)
         str_result = str_result.replace('    ', '\t')  # 把四个空格转换成\t
         path_default.write_text(str_result)
