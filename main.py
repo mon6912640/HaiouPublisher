@@ -1,6 +1,7 @@
 import argparse
 import json
 import locale
+import re
 import shutil
 import socket
 import subprocess
@@ -45,6 +46,10 @@ class VoProject:
     port = 0
     # 老项目标识
     old = 0
+    # 微信标识
+    wechat = 0
+    # 微信配置拆分的字符串长度
+    wechat_cfg_len = 900000
     urls = []
 
     def __init__(self):
@@ -303,10 +308,10 @@ async def main():
         log(print_now())
         log(">>开始更新骨骼资源...请耐心等待...")
         # modify_default(['boneAnimation', 'UI'], True)
-        modify_default(['boneAnimation'], True)
+        modify_default(['boneAnimation'], True, True)
         log(">>...骨骼资源更新并打包完毕")
 
-    def modify_default(paths, showlog=False):
+    def modify_default(paths, showlog=False, run_svn=False):
         """
         修改default文件
         :param paths:相对resource目录的路径列表
@@ -320,7 +325,8 @@ async def main():
             pv = Path(path_res, v)
             if pv.exists():
                 path_list.append(pv)
-                run_cmd('svn up --accept p {0}'.format(str(pv)), '更新错误', showlog=showlog)
+                if run_svn:
+                    run_cmd('svn up --accept p {0}'.format(str(pv)), '更新错误', showlog=showlog)
         if len(path_list) < 1:
             return
         if not path_default.exists():
@@ -364,8 +370,13 @@ async def main():
                 pass
             else:
                 # parent_dir = v.parent.relative_to(path_res)
-                if v.parent.name == 'UI':  # fgui的资源需要做特殊处理
-                    name = v.name.split('.')[0]
+                is_config = False
+                if v.parent.name == 'config':
+                    if re.match('^config\d', v.stem):
+                        is_config = True
+                if v.parent.name == 'UI' or is_config:
+                    # fgui的资源需要做特殊处理/config配置也需要特殊处理
+                    name = v.stem
                 else:
                     name = v.name.replace('.', '_')
                 t_type = get_type(v.suffix)
@@ -496,9 +507,104 @@ async def main():
 
         # print(obj_map)
         root_url = local.cur_project.root_work
-        json_str = json.dumps(obj_map, ensure_ascii=False, separators=(',', ':'))
-        json_path = Path(root_url, 'resource/config/config0.json')
-        json_path.write_text(json_str, encoding='utf-8')
+
+        objmaps = []
+
+        def chose_is_best2(p_len):
+            return p_len < local.cur_project.wechat_cfg_len
+
+        is_wechat = local.cur_project.wechat
+        if is_wechat:  # 微信要把配置切割
+            str_len1 = 0
+            str_len2 = 0
+            str_len3 = 0
+            str_len4 = 0
+            str_len5 = 0
+            str_len6 = 0
+            obj1 = {}
+            obj2 = {}
+            obj3 = {}
+            obj4 = {}
+            obj5 = {}
+            obj6 = {}
+            for key, val in obj_map.items():
+                temp_len = len(json.dumps(val, ensure_ascii=False, separators=(',', ':')))
+                if chose_is_best2(str_len1):
+                    str_len1 += temp_len
+                    obj1[key] = val
+                elif chose_is_best2(str_len2):
+                    str_len2 += temp_len
+                    obj2[key] = val
+                elif chose_is_best2(str_len3):
+                    str_len3 += temp_len
+                    obj3[key] = val
+                elif chose_is_best2(str_len4):
+                    str_len4 += temp_len
+                    obj4[key] = val
+                elif chose_is_best2(str_len5):
+                    str_len5 += temp_len
+                    obj5[key] = val
+                else:
+                    str_len6 += temp_len
+                    obj6[key] = val
+                pass
+            if str_len1:
+                objmaps.append(obj1)
+            if str_len2:
+                objmaps.append(obj2)
+            if str_len3:
+                objmaps.append(obj3)
+            if str_len4:
+                objmaps.append(obj4)
+            if str_len5:
+                objmaps.append(obj5)
+            if str_len6:
+                objmaps.append(obj6)
+        else:
+            objmaps.append(obj_map)
+
+        # 先清理原来的配置json
+        config_path = Path(root_url, 'resource/config')
+        list_file = sorted(config_path.rglob('*.json'))
+        for v in list_file:
+            # 删除config开头，后面带数字序号的配置文件
+            if re.match('^config\d', v.stem):
+                v.unlink()
+
+        for i in range(len(objmaps)):
+            json_str = json.dumps(objmaps[i], ensure_ascii=False, separators=(',', ':'))
+            json_path = Path(root_url, 'resource/config/config{0}.json'.format(i))
+            json_path.write_text(json_str, encoding='utf-8')
+
+        # 把config的json文件添加到default文件中去
+        path_default = Path(root_url, 'resource/default.res.json')
+        path_res = Path(root_url, 'resource')
+        str_json = path_default.read_text(encoding='utf-8')
+        obj_default = json.loads(str_json)
+
+        list_config_keys = []
+        config_change = False
+        obj_config = None
+        if obj_default['groups']:
+            for v in obj_default['groups']:
+                if v['name'] == 'config':
+                    obj_config = v
+                    list_config_keys = v['keys'].split(',')
+                    break
+        for i in range(len(objmaps)):
+            key_name = 'config{0}'.format(i)
+            if key_name in list_config_keys:
+                pass
+            else:
+                list_config_keys.append(key_name)
+                config_change = True
+        if config_change:
+            obj_config['keys'] = ','.join(list_config_keys)
+        print(list_config_keys)
+        str_result = json.dumps(obj_default, indent=4, ensure_ascii=False)
+        str_result = str_result.replace('    ', '\t')  # 把四个空格转换成\t
+        path_default.write_text(str_result)
+        modify_default(['config'])
 
         ts1_path = Path(root_url, 'src/config/IConfig.ts')
         ts1_path.write_text(ts1_str, encoding='utf-8')
@@ -687,6 +793,11 @@ def init_project(args):
 
     if 'old' in obj:
         vo.old = obj['old']
+
+    if 'wechat' in obj:
+        vo.wechat = obj['wechat']
+    if 'wechat_cfg_len' in obj:
+        vo.wechat_cfg_len = obj['wechat_cfg_len']
 
     if ok_flag:
         project_list.append(vo)
