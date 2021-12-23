@@ -6,4 +6,6 @@ chcp 65001
 set CFGS=./config.json
 set PORT=5004
 
-start python main.py --cfgs %CFGS% --port %PORT%
+rem start python main.py --cfgs %CFGS% --port %PORT%
+python main.py --cfgs %CFGS% --port %PORT%
+pause

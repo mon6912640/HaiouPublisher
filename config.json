@@ -18,10 +18,24 @@
       ]
     },
     {
-      "project": "枪战2",
-      "root": "I:/newQz/client/yxqz/",
+      "project": "海外",
+      "root": "I:/work_haiou/branches/sanguo_haiwai/sanguo/",
       "proto": "http://192.168.61.142:8080/ProtocolNewQZ/",
-      "cfg": "I:/newQz/策划/配置表/",
+      "cfg": "I:/work_haiou/策划/配置表（海外版本简体）/",
+      "urls": [
+        [
+          "版本服地址（枪战2）",
+          "http://192.168.61.64:5555/index.html"
+        ]
+      ]
+    },
+    {
+      "project": "三国2微信",
+      "root": "I:/sanguo2/client/sanguo2/",
+      "proto": "http://192.168.61.142:8080/ProtocolSgzjTwo/",
+      "cfg": "I:/sanguo2/策划/配置表/",
+      "wechat": 1,
+      "wechat_cfg_len": 900000,
       "urls": [
         [
           "版本服地址（枪战2）",
