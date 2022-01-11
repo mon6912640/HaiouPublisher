@@ -131,8 +131,9 @@ async def main():
     def get_user_ip():
         return info.user_ip
 
-    def log(p_content, scope=None):
-        msg_box.append(put_markdown(p_content))
+    def log(p_content):
+        with use_scope('msg_box'):
+            put_markdown(p_content)
 
     def error(p_content):
         log('<font color="#ff0000">{0}</font>'.format(p_content))
@@ -496,7 +497,7 @@ async def main():
                     try:
                         value = kv.parse_value(sheet.cell(i, kv.col_index))
                     except BaseException as err:
-                        col_num = kv.col_index + 1;
+                        col_num = kv.col_index + 1
                         col_num_str = common_util.covert_10_to_26(col_num)
                         error('{0} 表格数值类型解析错误，请检查 {1}行{2}({3})列\n'.format(v.name, i + 1, col_num, col_num_str))
                         value_list.append(sheet.cell(i, kv.col_index).value)
@@ -653,23 +654,25 @@ async def main():
         local.cur_project = vo
         set_item('tabIndex', btn_val)  # 记录当前页索引
         set_env(title='{0}({1})'.format(title, vo.project_name))
-        name_com.reset(put_markdown('## {0}'.format(vo.project_name)))
+        with use_scope('name_com', clear=True):
+            put_markdown('## {0}'.format(vo.project_name))
 
         links = []
         if vo.urls and len(vo.urls) > 0:
             for v in vo.urls:
                 links.append(put_link(v[0], url=v[1], new_window=True))
-        urls_com.reset(put_column(links))
+        with use_scope('urls_com', clear=True):
+            put_column(links)
 
         for i in range(len(tabs)):
             v = tabs[i]
             vo = project_list[i]
             if i == btn_val:
-                v.reset(
-                    put_buttons([dict(label=vo.project_name, value=i, color='danger')], onclick=partial(on_tab_click)))
+                with use_scope('tab' + str(i), clear=True):
+                    put_buttons([dict(label=vo.project_name, value=i, color='danger')], onclick=partial(on_tab_click))
             else:
-                v.reset(
-                    put_buttons([dict(label=vo.project_name, value=i, color='success')], onclick=partial(on_tab_click)))
+                with use_scope('tab' + str(i), clear=True):
+                    put_buttons([dict(label=vo.project_name, value=i, color='success')], onclick=partial(on_tab_click))
         return vo
 
     def one_key(btn_val=None):
@@ -692,8 +695,10 @@ async def main():
         log('>><font color="#0000ff">...一键发布完成</font>')
         popup('通知', '{0} 一键发布完成'.format(cur_project.project_name), size=PopupSize.SMALL)
 
-    name_com = output()
-    urls_com = output()
+    # name_com = output()
+    name_com = put_scope('name_com')
+    # urls_com = output()
+    urls_com = put_scope('urls_com')
 
     right = put_table([
         [name_com, put_buttons([dict(label='一键发布', value=0, color='warning')], onclick=partial(one_key))],
@@ -712,7 +717,9 @@ async def main():
     str_size = ''
     for i in range(len(project_list)):
         v = project_list[i]
-        tab = output(put_buttons([dict(label=v.project_name, value=i, color='success')], onclick=partial(on_tab_click)))
+        tab = put_scope('tab' + str(i),
+                        put_buttons([dict(label=v.project_name, value=i, color='success')],
+                                    onclick=partial(on_tab_click)))
         tabs.append(tab)
         if i == 0:
             str_size += '50px'
@@ -723,13 +730,13 @@ async def main():
     put_row([left, None, right], size='15% 10px 85%')
 
     put_markdown('## 日志信息')
-    msg_box = output()
+    msg_box = put_scope('msg_box')
     with use_scope('content'):
         put_scrollable(msg_box, height=400, keep_bottom=True)
 
     tab_str = await get_item('tabIndex')
     if tab_str is None:
-        tab_index = 0;
+        tab_index = 0
     else:
         tab_index = int(tab_str)
     if tab_index < len(project_list):
@@ -788,7 +795,7 @@ def init_project(args):
         break
 
     if 'urls' in obj:
-        vo.urls = obj['urls'];
+        vo.urls = obj['urls']
 
     if 'old' in obj:
         vo.old = obj['old']
