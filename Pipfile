@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 pywebio = "==1.5.2"
 xlrd = "==1.2.0"
+requests = "*"
 
 [dev-packages]
 
